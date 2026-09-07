@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { openDb } from './db'
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -19,7 +20,10 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  openDb(join(app.getPath('userData'), 'aigaokao.db'))
+  createWindow()
+})
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
