@@ -1,9 +1,15 @@
-import { BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { getDb } from './db'
 import { encryptKey, decryptKey } from './secure'
 import { maskKey } from '../shared/mask'
 import { chatText, makeDeps } from './zenmux'
 import { cancelDownload, dataStatus, downloadPdfDir, downloadStructured, listPdfDirs } from './downloader'
+import { questionsDelete, questionsExport, questionsGet, questionsQuery } from './questions'
+import { buildKg, cancelKg, kgGet } from './kg'
+import { genCreate, genPending, genResolve, solveRun } from './generate'
+import { existsSync, readdirSync, statSync } from 'fs'
+import { join } from 'path'
+import { safeJoin } from './pure/download-helpers'
 
 const DEFAULT_ROLES = {
   generator: 'openai/gpt-5.4',
@@ -30,10 +36,6 @@ function getRoles(): { generator: string; solver: string; verifier: string } {
     solver: getSetting('role_solver') ?? DEFAULT_ROLES.solver,
     verifier: getSetting('role_verifier') ?? DEFAULT_ROLES.verifier
   }
-}
-
-function notImplemented(): never {
-  throw new Error('未实现')
 }
 
 export function registerIpc(): void {
@@ -101,16 +103,46 @@ export function registerIpc(): void {
   ipcMain.handle('dataCancel', async () => {
     cancelDownload()
   })
-  ipcMain.handle('questionsQuery', async () => notImplemented())
-  ipcMain.handle('questionsGet', async () => notImplemented())
-  ipcMain.handle('questionsDelete', async () => notImplemented())
-  ipcMain.handle('questionsExport', async () => notImplemented())
-  ipcMain.handle('kgBuild', async () => notImplemented())
-  ipcMain.handle('kgCancel', async () => notImplemented())
-  ipcMain.handle('kgGet', async () => notImplemented())
-  ipcMain.handle('genCreate', async () => notImplemented())
-  ipcMain.handle('genPending', async () => notImplemented())
-  ipcMain.handle('genResolve', async () => notImplemented())
-  ipcMain.handle('solveRun', async () => notImplemented())
-  ipcMain.handle('pdfList', async () => notImplemented())
+  ipcMain.handle('questionsQuery', async (_e, q) => questionsQuery(q))
+  ipcMain.handle('questionsGet', async (_e, id: number) => questionsGet(id))
+  ipcMain.handle('questionsDelete', async (_e, ids: number[]) => questionsDelete(ids))
+  ipcMain.handle('questionsExport', async (_e, ids: number[], format: 'json' | 'markdown') =>
+    questionsExport(ids, format)
+  )
+  ipcMain.handle('kgBuild', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    if (!win) throw new Error('无窗口')
+    await buildKg(win)
+  })
+  ipcMain.handle('kgCancel', async () => {
+    cancelKg()
+  })
+  ipcMain.handle('kgGet', async () => kgGet())
+  ipcMain.handle('genCreate', async (e, p) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    if (!win) throw new Error('无窗口')
+    await genCreate(win, p)
+  })
+  ipcMain.handle('genPending', async () => genPending())
+  ipcMain.handle('genResolve', async (_e, id: number, action: 'accept' | 'discard') => genResolve(id, action))
+  ipcMain.handle('solveRun', async (e, questionId: number) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    if (!win) throw new Error('无窗口')
+    await solveRun(win, questionId)
+  })
+  ipcMain.handle('pdfList', async () => {
+    const root = join(app.getPath('userData'), 'data', 'pdfs')
+    if (!existsSync(root)) return []
+    const years = readdirSync(root).filter((y) => statSync(join(root, y)).isDirectory())
+    return years.map((year) => ({
+      year,
+      files: readdirSync(join(root, year))
+        .filter((n) => n.toLowerCase().endsWith('.pdf'))
+        .map((name) => ({ name, url: `app-pdf://${year}/${name}` }))
+    }))
+  })
+  ipcMain.handle('pdfOpenExternal', async (_e, rel: string) => {
+    const abs = safeJoin(join(app.getPath('userData'), 'data', 'pdfs'), rel)
+    await shell.openPath(abs)
+  })
 }
