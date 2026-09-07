@@ -4,6 +4,7 @@ import type { BrowserWindow } from 'electron'
 import { getDb } from './db'
 import { dedupKey, mapRecord } from './pure/map-record'
 import type { ProgressPayload } from '../shared/types'
+import { log } from './log'
 
 function walk(dir: string): string[] {
   const out: string[] = []
@@ -121,7 +122,7 @@ export function importStructured(root: string, win: BrowserWindow | null = null)
       }
     } catch (e) {
       failedFiles.push(file)
-      void e
+      log(`import file fail ${file} ${e instanceof Error ? e.message : String(e)}`)
     }
   })
   flushBatch()
@@ -132,5 +133,6 @@ export function importStructured(root: string, win: BrowserWindow | null = null)
     message: `成功 ${ok} 条,跳过 ${skipped} 条`,
     state: 'ok'
   })
+  log(`import ok=${ok} skipped=${skipped} failedFiles=${failedFiles.length}`)
   return { ok, skipped, failedFiles }
 }

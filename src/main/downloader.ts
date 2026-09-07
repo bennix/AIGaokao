@@ -8,6 +8,7 @@ import extract from 'extract-zip'
 import type { ProgressPayload } from '../shared/types'
 import { getDb } from './db'
 import { importStructured } from './importer'
+import { log } from './log'
 import { safeJoin, shouldSkipFile } from './pure/download-helpers'
 
 const STRUCTURED_ZIP = 'https://codeload.github.com/rainewhk/gaokao/zip/refs/heads/main'
@@ -81,6 +82,7 @@ export async function downloadStructured(win: BrowserWindow): Promise<void> {
     })
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
+    log(`downloadStructured fail ${message}`)
     send(win, { task: 'download', done: 0, total: 1, message, state: 'error' })
     throw e
   }
@@ -116,6 +118,7 @@ export async function downloadPdfDir(win: BrowserWindow, dirPath: string): Promi
     const localSize = exists ? statSync(abs).size : 0
     if (shouldSkipFile({ exists, localSize, remoteSize: f.size ?? -1 })) {
       done++
+      log(`skip ${rel}`)
       send(win, { task: 'download', done, total: files.length, message: `skip ${rel}`, state: 'running' })
       continue
     }
@@ -135,7 +138,7 @@ export async function downloadPdfDir(win: BrowserWindow, dirPath: string): Promi
     }
     if (!ok) {
       failed++
-      void lastErr
+      log(`pdf fail ${rel} ${lastErr?.message ?? ''}`)
     }
     done++
     send(win, {
