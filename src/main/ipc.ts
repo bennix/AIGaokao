@@ -1,7 +1,8 @@
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
 import { getDb } from './db'
 import { encryptKey, decryptKey } from './secure'
 import { maskKey } from '../shared/mask'
+import { chatText, makeDeps } from './zenmux'
 
 const DEFAULT_ROLES = {
   generator: 'openai/gpt-5.4',
@@ -71,7 +72,19 @@ export function registerIpc(): void {
     getDb().prepare('DELETE FROM models WHERE name = ?').run(name)
   })
 
-  ipcMain.handle('zenmuxTest', async () => notImplemented())
+  ipcMain.handle('zenmuxTest', async () => {
+    try {
+      const roles = getRoles()
+      const text = await chatText(makeDeps(), roles.solver, '1+1=?')
+      return { ok: true, message: text.slice(0, 50) }
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  ipcMain.handle('openInvite', async () => {
+    await shell.openExternal('https://zenmux.ai/invite/GBQMC5')
+  })
   ipcMain.handle('dataStatus', async () => notImplemented())
   ipcMain.handle('dataDownloadStructured', async () => notImplemented())
   ipcMain.handle('dataListPdfDirs', async () => notImplemented())

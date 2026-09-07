@@ -9,6 +9,7 @@ export interface Api {
   modelsAdd(name: string): Promise<void>;
   modelsRemove(name: string): Promise<void>;                       // 被角色占用时抛错
   zenmuxTest(): Promise<{ ok: boolean; message: string }>;         // 用 solver 模型发一条 "1+1=?" 验证连通
+  openInvite(): Promise<void>;
 
   // ---- 数据中心 ----
   dataStatus(): Promise<{ structuredImported: boolean; questionCount: number;

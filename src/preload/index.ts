@@ -9,6 +9,7 @@ const api: Api = {
   modelsAdd: (name) => ipcRenderer.invoke('modelsAdd', name),
   modelsRemove: (name) => ipcRenderer.invoke('modelsRemove', name),
   zenmuxTest: () => ipcRenderer.invoke('zenmuxTest'),
+  openInvite: () => ipcRenderer.invoke('openInvite'),
 
   dataStatus: () => ipcRenderer.invoke('dataStatus'),
   dataDownloadStructured: () => ipcRenderer.invoke('dataDownloadStructured'),
