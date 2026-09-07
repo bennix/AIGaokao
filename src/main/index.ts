@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { openDb } from './db'
+import { registerIpc } from './ipc'
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -22,6 +23,7 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   openDb(join(app.getPath('userData'), 'aigaokao.db'))
+  registerIpc()
   createWindow()
 })
 app.on('window-all-closed', () => {
