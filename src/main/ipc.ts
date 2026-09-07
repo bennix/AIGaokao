@@ -1,8 +1,9 @@
-import { ipcMain, shell } from 'electron'
+import { BrowserWindow, ipcMain, shell } from 'electron'
 import { getDb } from './db'
 import { encryptKey, decryptKey } from './secure'
 import { maskKey } from '../shared/mask'
 import { chatText, makeDeps } from './zenmux'
+import { cancelDownload, dataStatus, downloadPdfDir, downloadStructured, listPdfDirs } from './downloader'
 
 const DEFAULT_ROLES = {
   generator: 'openai/gpt-5.4',
@@ -85,11 +86,21 @@ export function registerIpc(): void {
   ipcMain.handle('openInvite', async () => {
     await shell.openExternal('https://zenmux.ai/invite/GBQMC5')
   })
-  ipcMain.handle('dataStatus', async () => notImplemented())
-  ipcMain.handle('dataDownloadStructured', async () => notImplemented())
-  ipcMain.handle('dataListPdfDirs', async () => notImplemented())
-  ipcMain.handle('dataDownloadPdfDir', async () => notImplemented())
-  ipcMain.handle('dataCancel', async () => notImplemented())
+  ipcMain.handle('dataStatus', async () => dataStatus())
+  ipcMain.handle('dataDownloadStructured', async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    if (!win) throw new Error('无窗口')
+    await downloadStructured(win)
+  })
+  ipcMain.handle('dataListPdfDirs', async () => listPdfDirs())
+  ipcMain.handle('dataDownloadPdfDir', async (e, dirPath: string) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    if (!win) throw new Error('无窗口')
+    await downloadPdfDir(win, dirPath)
+  })
+  ipcMain.handle('dataCancel', async () => {
+    cancelDownload()
+  })
   ipcMain.handle('questionsQuery', async () => notImplemented())
   ipcMain.handle('questionsGet', async () => notImplemented())
   ipcMain.handle('questionsDelete', async () => notImplemented())

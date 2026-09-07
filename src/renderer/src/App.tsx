@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Data from './pages/Data'
 import Settings from './pages/Settings'
 
 const NAV = ['数据中心', '题库', 'PDF 阅卷', '知识图谱', 'AI 出题', '待确认', '设置'] as const
@@ -19,7 +20,9 @@ export default function App(): JSX.Element {
           </button>
         ))}
       </nav>
-      <main className="main">{page === '设置' ? <Settings /> : <div>{page}</div>}</main>
+      <main className="main">
+        {page === '设置' ? <Settings /> : page === '数据中心' ? <Data /> : <div>{page}</div>}
+      </main>
     </div>
   )
 }
