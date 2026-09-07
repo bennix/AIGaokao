@@ -46,6 +46,7 @@ export interface Api {
   // ---- PDF ----
   pdfList(): Promise<{ year: string; files: { name: string; url: string }[] }[]>;
     // url 形如 'app-pdf://<年份>/<文件名>.pdf'(main 注册的自定义只读协议,映射到 userData/data/pdfs)
+  pdfOpenExternal(rel: string): Promise<void>;
 
   // ---- 事件订阅 ----
   on(channel: 'progress'|'gen:done'|'solve:done',

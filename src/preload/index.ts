@@ -32,6 +32,7 @@ const api: Api = {
   solveRun: (questionId) => ipcRenderer.invoke('solveRun', questionId),
 
   pdfList: () => ipcRenderer.invoke('pdfList'),
+  pdfOpenExternal: (rel) => ipcRenderer.invoke('pdfOpenExternal', rel),
 
   on(channel, cb) {
     const listener = (_event: unknown, payload: ProgressPayload | { questionId: number }): void => {
