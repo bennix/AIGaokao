@@ -1,20 +1,17 @@
 import { useState } from 'react'
 import Bank from './pages/Bank'
 import Data from './pages/Data'
-import Generate from './pages/Generate'
 import Graph from './pages/Graph'
 import Pdf from './pages/Pdf'
-import Pending from './pages/Pending'
 import QuestionDetail from './pages/QuestionDetail'
 import Settings from './pages/Settings'
 
-const NAV = ['数据中心', '题库', 'PDF 阅卷', '知识图谱', 'AI 出题', '待确认', '设置'] as const
+const NAV = ['数据中心', '题库', 'PDF 阅卷', '知识图谱', '设置'] as const
 
 export default function App(): JSX.Element {
   const [page, setPage] = useState<(typeof NAV)[number]>('数据中心')
   const [questionId, setQuestionId] = useState<number | null>(null)
   const [kpFilter, setKpFilter] = useState<number[]>([])
-  const [genKpIds, setGenKpIds] = useState<number[]>([])
 
   function go(name: (typeof NAV)[number]): void {
     setPage(name)
@@ -46,26 +43,16 @@ export default function App(): JSX.Element {
         {page === 'PDF 阅卷' && <Pdf />}
         {page === '知识图谱' && (
           <Graph
-            onGenerate={(ids) => {
-              setGenKpIds(ids)
-              setPage('AI 出题')
-            }}
             onFilterBank={(ids) => {
               setKpFilter(ids)
               setPage('题库')
             }}
-          />
-        )}
-        {page === 'AI 出题' && (
-          <Generate
-            kpIds={genKpIds}
-            onOpen={(id) => {
+            onOpenQuestion={(id) => {
               setQuestionId(id)
               setPage('题库')
             }}
           />
         )}
-        {page === '待确认' && <Pending />}
       </main>
     </div>
   )

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { QuestionRow } from '../../../shared/types'
 import MarkdownLatex from '../components/MarkdownLatex'
 
-export default function Pending(): JSX.Element {
+export default function Pending(): JSX.Element | null {
   const [items, setItems] = useState<QuestionRow[]>([])
   const [open, setOpen] = useState<number | null>(null)
   const [detail, setDetail] = useState<Awaited<ReturnType<typeof window.api.questionsGet>> | null>(null)
@@ -40,9 +40,11 @@ export default function Pending(): JSX.Element {
     }
   }
 
+  if (state === 'ok' && !items.length && !detail) return null
+
   return (
-    <div className="page">
-      <h1>待确认</h1>
+    <div>
+      <h2>待确认</h2>
       {state === 'loading' && <p>加载中…</p>}
       {state === 'error' && (
         <p className="err">
@@ -62,9 +64,14 @@ export default function Pending(): JSX.Element {
         <section className="card">
           <h2>题目</h2>
           <MarkdownLatex text={detail.question.stem} />
-          <p>命题人答案：{detail.question.answer}</p>
-          <p>解题人答案：{detail.solutions[0]?.finalAnswer}</p>
-          <p>验证意见：{detail.solutions[0]?.verdict} {detail.solutions[0]?.note}</p>
+          <h2>命题人答案</h2>
+          <MarkdownLatex text={detail.question.answer ?? ''} />
+          <h2>解题人答案</h2>
+          <MarkdownLatex text={detail.solutions[0]?.finalAnswer ?? ''} />
+          <h2>验证意见</h2>
+          <MarkdownLatex
+            text={`${detail.solutions[0]?.verdict ?? ''}\n\n${detail.solutions[0]?.note ?? ''}`}
+          />
           <div className="row">
             <button onClick={() => void resolve(detail.question.id, 'accept')}>采纳</button>
             <button onClick={() => void resolve(detail.question.id, 'discard')}>丢弃</button>

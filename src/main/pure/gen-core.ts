@@ -42,8 +42,9 @@ export type PipelineDeps = {
 }
 
 const GEN_SYSTEM =
-  '你是高考数学命题专家。你只输出 JSON,数学公式一律使用 LaTeX(行内 $...$,独立 $$...$$)。'
-const SOLVE_SYSTEM = '你是高考数学解题专家。你只输出 JSON,数学公式一律使用 LaTeX。'
+  '你是高考数学命题专家。你只输出 JSON,数学公式一律使用 LaTeX(行内 $...$,独立 $$...$$)。JSON 字符串内反斜杠必须写成 \\\\，例如 \\\\frac{1}{2}。'
+const SOLVE_SYSTEM =
+  '你是高考数学解题专家。你只输出 JSON,数学公式一律使用 LaTeX。JSON 字符串内反斜杠必须写成 \\\\，例如 \\\\frac{1}{2}。'
 const VERIFY_SYSTEM = '你是严格的高考数学阅卷专家。你只输出 JSON。'
 
 const QTYPE_CN: Record<string, string> = {

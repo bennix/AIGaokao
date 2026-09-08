@@ -15,4 +15,18 @@ describe('renderMarkdownLatex', () => {
   it('普通 Markdown 正常', () => {
     expect(renderMarkdownLatex('**粗体**')).toContain('<strong>')
   })
+  it('含不等式与 frac 的行内公式', () => {
+    const html = renderMarkdownLatex('统计部分: $K^2\\approx 4.35 > 3.841$, 对于$(2x-\\frac{1}{x})^5$')
+    expect(html).toContain('katex')
+    expect(html).not.toContain('$K^2')
+    expect(html).not.toContain('$(2x-')
+  })
+  it('括号包裹的行内公式', () => {
+    const html = renderMarkdownLatex('参考答案选B ($a+b=33$), 令$x=1$')
+    expect(html).toContain('katex')
+    expect(html).not.toContain('$a+b=33$')
+  })
+  it('\\( \\) 与 \\[ \\] 分隔符', () => {
+    expect(renderMarkdownLatex('令 \\(x=1\\) 且 \\[a+b=1\\]')).toContain('katex')
+  })
 })

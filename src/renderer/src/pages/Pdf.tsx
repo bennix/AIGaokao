@@ -59,6 +59,7 @@ export default function Pdf(): JSX.Element {
           ))}
         </aside>
         <div className="pdf-view">
+          {!cur && <p className="muted">请选择左侧 PDF</p>}
           {cur && !fallback && (
             <iframe
               title={cur.name}

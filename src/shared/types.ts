@@ -34,7 +34,8 @@ export interface Api {
   kgCancel(): Promise<void>;
   kgGet(): Promise<{ nodes: { id: number; name: string; level: string;
     parentId: number|null; questionCount: number }[];
-    edges: { a: number; b: number }[] }>;
+    edges: { a: number; b: number }[];
+    build: { processed: number; remaining: number } }>;
 
   // ---- 出题与详解 ----
   genCreate(p: { kpIds: number[]; qtype: 'choice'|'answer'|'comprehensive';
@@ -63,4 +64,6 @@ export interface SolutionRow { id: number; methodA: string; methodB: string;
 
 export interface ProgressPayload { task: 'download'|'import'|'kg'|'gen';
   done: number; total: number; message: string;
-  state: 'running'|'ok'|'error'|'cancelled'; }
+  state: 'running'|'ok'|'error'|'cancelled';
+  preview?: string;
+  questionId?: number; }

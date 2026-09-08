@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { ProgressPayload } from '../../../shared/types'
+import MarkdownLatex from '../components/MarkdownLatex'
 
 type Props = { kpIds: number[]; onOpen: (id: number) => void }
 
@@ -10,6 +10,7 @@ export default function Generate({ kpIds, onOpen }: Props): JSX.Element {
   const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
   const [error, setError] = useState('')
   const [progress, setProgress] = useState('')
+  const [preview, setPreview] = useState('')
   const [doneId, setDoneId] = useState<number | null>(null)
 
   useEffect(() => {
@@ -17,13 +18,16 @@ export default function Generate({ kpIds, onOpen }: Props): JSX.Element {
       setNames(g.nodes.filter((n) => kpIds.includes(n.id)).map((n) => n.name))
     })
     return window.api.on('progress', (p) => {
-      if ('task' in p && p.task === 'gen') setProgress(p.message)
+      if ('task' in p && p.task === 'gen') {
+        setProgress(p.message)
+        if (p.preview != null) setPreview(p.preview)
+      }
     })
   }, [kpIds])
 
   useEffect(() => {
     return window.api.on('gen:done', (p) => {
-      if ('questionId' in p) {
+      if ('questionId' in p && typeof p.questionId === 'number') {
         setDoneId(p.questionId)
         setState('ok')
       }
@@ -33,6 +37,7 @@ export default function Generate({ kpIds, onOpen }: Props): JSX.Element {
   async function start(): Promise<void> {
     setState('loading')
     setError('')
+    setPreview('')
     try {
       await window.api.genCreate({ kpIds, qtype, count })
       setState('ok')
@@ -43,8 +48,8 @@ export default function Generate({ kpIds, onOpen }: Props): JSX.Element {
   }
 
   return (
-    <div className="page">
-      <h1>AI 出题</h1>
+    <div>
+      <h2>出题</h2>
       <div className="chips">
         {names.map((n) => (
           <span key={n} className="chip">
@@ -70,6 +75,11 @@ export default function Generate({ kpIds, onOpen }: Props): JSX.Element {
         </button>
       </div>
       {progress && <p>{progress}</p>}
+      {state === 'loading' && (
+        <section className="card stream-box">
+          {preview ? <MarkdownLatex text={preview} /> : <p className="muted">等待模型输出…</p>}
+        </section>
+      )}
       {state === 'error' && (
         <p className="err">
           {error} <button onClick={() => void start()}>重试</button>

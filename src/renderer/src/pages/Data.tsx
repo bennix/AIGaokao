@@ -84,6 +84,7 @@ export default function Data(): JSX.Element {
     )
   }
 
+  const busy = struct.kind === 'loading' || pdfState.kind === 'loading'
   const pct = progress && progress.total ? Math.round((progress.done / progress.total) * 100) : 0
 
   return (
@@ -144,13 +145,16 @@ export default function Data(): JSX.Element {
         ))}
       </section>
 
-      {progress && (
+      {(busy || progress) && (
         <section className="card">
+          <h2>进度</h2>
           <div className="progress">
-            <span style={{ width: `${pct}%` }} />
+            <span style={{ width: `${Math.min(100, pct)}%` }} />
           </div>
           <p>
-            {progress.message} ({progress.done}/{progress.total}) {progress.state}
+            {progress
+              ? `${progress.message}（${progress.done}/${progress.total}，${pct}%） ${progress.state}`
+              : '准备中…'}
           </p>
         </section>
       )}

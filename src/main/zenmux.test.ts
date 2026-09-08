@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { z } from 'zod'
+
+vi.mock('./db', () => ({ getDb: vi.fn() }))
+vi.mock('./secure', () => ({ decryptKey: vi.fn() }))
+
 import { stripFence, chatJSON, type ChatDeps } from './zenmux'
 
 const okResponse = (content: string) =>
@@ -48,5 +52,30 @@ describe('chatJSON', () => {
   it('401 抛出 KEY 无效提示', async () => {
     const f = vi.fn(async () => new Response('x', { status: 401 }))
     await expect(chatJSON(deps(f as never), 'm', 's', 'u', schema)).rejects.toThrow('API-KEY 无效')
+  })
+
+  it('围栏外说明 + 未转义 LaTeX 仍能通过', async () => {
+    const f = vi.fn(async () => okResponse('如下\n```json\n{"a":1}\n```'))
+    await expect(chatJSON(deps(f as never), 'm', 'sys', 'usr', schema)).resolves.toEqual({ a: 1 })
+  })
+
+  it('onDelta 时按 SSE 拼接', async () => {
+    const sse =
+      'data: {"choices":[{"delta":{"content":"{\\"a\\":"}}]}\n\n' +
+      'data: {"choices":[{"delta":{"content":"1}"}}]}\n\n' +
+      'data: [DONE]\n\n'
+    const f = vi.fn(
+      async () => new Response(sse, { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+    )
+    const chunks: string[] = []
+    const r = await chatJSON(
+      { ...deps(f as never), onDelta: (t) => chunks.push(t) },
+      'm',
+      's',
+      'u',
+      schema
+    )
+    expect(r).toEqual({ a: 1 })
+    expect(chunks.at(-1)).toBe('{"a":1}')
   })
 })

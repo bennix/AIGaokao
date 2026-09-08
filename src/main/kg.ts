@@ -2,6 +2,7 @@ import type { BrowserWindow } from 'electron'
 import { getDb } from './db'
 import { log } from './log'
 import { applyKgResult, KgSchema, type KgRepo } from './pure/kg-core'
+import { shouldAdvanceKgCursor } from '../shared/kg-resume'
 import { chatJSON, makeDeps } from './zenmux'
 import type { ProgressPayload } from '../shared/types'
 
@@ -48,16 +49,46 @@ function sqliteRepo(): KgRepo {
 
 const KG_SYSTEM = '你是高考数学教研专家。你只输出 JSON,不输出任何其他文字、解释或 Markdown 围栏。'
 
+function importedCounts(cursor: number): { processed: number; remaining: number } {
+  const processed = (
+    getDb()
+      .prepare("SELECT COUNT(*) AS c FROM questions WHERE source='imported' AND deleted=0 AND id <= ?")
+      .get(cursor) as { c: number }
+  ).c
+  const remaining = (
+    getDb()
+      .prepare("SELECT COUNT(*) AS c FROM questions WHERE source='imported' AND deleted=0 AND id > ?")
+      .get(cursor) as { c: number }
+  ).c
+  return { processed, remaining }
+}
+
 export async function buildKg(win: BrowserWindow): Promise<void> {
   cancelled = false
   let cursor = Number(getSetting('kg_build_cursor') ?? '0')
-  log(`kgBuild start cursor=${cursor}`)
+  const start = importedCounts(cursor)
+  const total = start.processed + start.remaining
+  let done = start.processed
+  log(`kgBuild start cursor=${cursor} processed=${done} remaining=${start.remaining}`)
   const generator = getSetting('role_generator') ?? 'openai/gpt-5.4'
-  const totalRow = getDb()
-    .prepare("SELECT COUNT(*) AS c FROM questions WHERE source='imported' AND deleted=0 AND id > ?")
-    .get(cursor) as { c: number }
-  let done = 0
-  const deps = makeDeps()
+  const deps = makeDeps({
+    aborted: () => cancelled,
+    onWait: (ms) =>
+      send(win, {
+        task: 'kg',
+        done,
+        total,
+        message: `ZenMux 限速 10 RPM，等待 ${Math.ceil(ms / 1000)} 秒后继续`,
+        state: 'running'
+      })
+  })
+  send(win, {
+    task: 'kg',
+    done,
+    total,
+    message: start.processed ? `从断点继续（已处理 ${start.processed} 题）` : '开始构建知识点',
+    state: 'running'
+  })
   while (!cancelled) {
     const rows = getDb()
       .prepare(
@@ -68,8 +99,8 @@ export async function buildKg(win: BrowserWindow): Promise<void> {
     send(win, {
       task: 'kg',
       done,
-      total: totalRow.c,
-      message: `处理 ${rows[0].id}–${rows[rows.length - 1].id}`,
+      total,
+      message: `ZenMux 提炼知识点 ${rows[0].id}–${rows[rows.length - 1].id}`,
       state: 'running'
     })
     const user = `对下面每道题,给出其所属章节(chapter)、考点(topic)、知识点(point,可多个),
@@ -86,19 +117,24 @@ ${JSON.stringify(rows.map((r) => ({ question_id: r.id, stem: r.stem })))}`
         setSetting('kg_build_cursor', String(rows[rows.length - 1].id))
       })
       tx()
-      log(`kg batch ok maxId=${rows[rows.length - 1].id}`)
+      cursor = rows[rows.length - 1].id
+      done += rows.length
+      log(`kg batch ok maxId=${cursor}`)
     } catch (e) {
-      log(`kg batch fail ${e instanceof Error ? e.message : String(e)}`)
-      setSetting('kg_build_cursor', String(rows[rows.length - 1].id))
+      const message = e instanceof Error ? e.message : String(e)
+      const outcome = cancelled || message.includes('已取消') ? 'cancel' : 'fail'
+      log(`kg batch ${outcome} ${message}`)
+      if (shouldAdvanceKgCursor(outcome)) continue
+      if (outcome === 'cancel') break
+      send(win, { task: 'kg', done, total, message: `本批失败，断点未推进：${message}`, state: 'error' })
+      throw e
     }
-    cursor = rows[rows.length - 1].id
-    done += rows.length
   }
   send(win, {
     task: 'kg',
     done,
-    total: totalRow.c,
-    message: cancelled ? '已取消' : '构建完成',
+    total,
+    message: cancelled ? '已暂停，可继续构建' : '构建完成',
     state: cancelled ? 'cancelled' : 'ok'
   })
 }
@@ -106,6 +142,7 @@ ${JSON.stringify(rows.map((r) => ({ question_id: r.id, stem: r.stem })))}`
 export function kgGet(): {
   nodes: { id: number; name: string; level: string; parentId: number | null; questionCount: number }[]
   edges: { a: number; b: number }[]
+  build: { processed: number; remaining: number }
 } {
   const nodes = getDb()
     .prepare(
@@ -116,5 +153,6 @@ export function kgGet(): {
     )
     .all() as { id: number; name: string; level: string; parentId: number | null; questionCount: number }[]
   const edges = getDb().prepare('SELECT a_id AS a, b_id AS b FROM kp_edges').all() as { a: number; b: number }[]
-  return { nodes, edges }
+  const cursor = Number(getSetting('kg_build_cursor') ?? '0')
+  return { nodes, edges, build: importedCounts(cursor) }
 }

@@ -10,6 +10,7 @@ import { genCreate, genPending, genResolve, solveRun } from './generate'
 import { existsSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import { safeJoin } from './pure/download-helpers'
+import { pdfAppUrl } from './pure/pdf-url'
 
 const DEFAULT_ROLES = {
   generator: 'openai/gpt-5.4',
@@ -133,16 +134,28 @@ export function registerIpc(): void {
   ipcMain.handle('pdfList', async () => {
     const root = join(app.getPath('userData'), 'data', 'pdfs')
     if (!existsSync(root)) return []
-    const years = readdirSync(root).filter((y) => statSync(join(root, y)).isDirectory())
-    return years.map((year) => ({
+    const groups = readdirSync(root).filter((y) => statSync(join(root, y)).isDirectory())
+    return groups.map((year) => ({
       year,
-      files: readdirSync(join(root, year))
-        .filter((n) => n.toLowerCase().endsWith('.pdf'))
-        .map((name) => ({ name, url: `app-pdf://${year}/${name}` }))
+      files: walkPdfs(join(root, year), year).map((rel) => ({
+        name: rel.slice(year.length + 1) || rel,
+        url: pdfAppUrl(rel)
+      }))
     }))
   })
   ipcMain.handle('pdfOpenExternal', async (_e, rel: string) => {
     const abs = safeJoin(join(app.getPath('userData'), 'data', 'pdfs'), rel)
     await shell.openPath(abs)
   })
+}
+
+function walkPdfs(dir: string, prefix: string): string[] {
+  const out: string[] = []
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name)
+    const rel = `${prefix}/${name}`
+    if (statSync(p).isDirectory()) out.push(...walkPdfs(p, rel))
+    else if (name.toLowerCase().endsWith('.pdf')) out.push(rel)
+  }
+  return out
 }

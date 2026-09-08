@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AIGaokao · 高考数学桌面端</title>
+    <meta name="description" content="高考数学题库、知识图谱与智能出题。下载 macOS、Windows、Ubuntu、RPM 安装包。" />
+    <link rel="icon" href="./assets/icon.png" />
+    <link rel="apple-touch-icon" href="./assets/icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #1b2433;
+        --cinnabar: #b23a3a;
+        --cream: #f4efe4;
+        --rule: #c9c0b0;
+        --mute: #5c564c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--cream);
+        color: var(--ink);
+        font-family: 'IBM Plex Sans', 'PingFang SC', sans-serif;
+      }
+      body {
+        background-image:
+          linear-gradient(rgba(27, 36, 51, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(27, 36, 51, 0.045) 1px, transparent 1px);
+        background-size: 28px 28px;
+      }
+      main {
+        width: min(920px, calc(100% - 40px));
+        margin: 48px auto 72px;
+      }
+      .ticket {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        border: 1.5px solid var(--ink);
+        background: color-mix(in srgb, var(--cream) 92%, white);
+        min-height: 420px;
+      }
+      .stamp {
+        border-right: 1.5px dashed var(--rule);
+        padding: 36px 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        text-align: center;
+      }
+      .stamp img {
+        width: 128px;
+        height: 128px;
+        border-radius: 22%;
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 20%, transparent);
+      }
+      .seal {
+        font-family: 'Noto Serif SC', serif;
+        color: var(--cinnabar);
+        font-size: 15px;
+        letter-spacing: 0.18em;
+      }
+      .body {
+        padding: 40px 44px 36px;
+      }
+      h1 {
+        font-family: 'Noto Serif SC', serif;
+        font-weight: 700;
+        font-size: clamp(36px, 5vw, 52px);
+        line-height: 1.15;
+        margin: 0 0 12px;
+      }
+      .lead {
+        margin: 0 0 28px;
+        max-width: 38em;
+        color: var(--mute);
+        line-height: 1.65;
+      }
+      .downloads {
+        display: grid;
+        gap: 10px;
+      }
+      a.dl {
+        display: grid;
+        grid-template-columns: 108px 1fr auto;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 14px;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid var(--rule);
+        background: #fffdf8;
+      }
+      a.dl:hover,
+      a.dl:focus-visible {
+        border-color: var(--cinnabar);
+        outline: none;
+      }
+      a.dl strong {
+        font-size: 14px;
+      }
+      a.dl span {
+        color: var(--mute);
+        font-size: 13px;
+      }
+      a.dl em {
+        font-style: normal;
+        font-size: 13px;
+        color: var(--cinnabar);
+      }
+      footer {
+        margin-top: 18px;
+        color: var(--mute);
+        font-size: 13px;
+      }
+      footer a {
+        color: var(--ink);
+      }
+      @media (max-width: 720px) {
+        .ticket {
+          grid-template-columns: 1fr;
+        }
+        .stamp {
+          border-right: 0;
+          border-bottom: 1.5px dashed var(--rule);
+          flex-direction: row;
+          justify-content: flex-start;
+          padding: 20px;
+        }
+        .body {
+          padding: 28px 20px;
+        }
+        a.dl {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article class="ticket">
+        <aside class="stamp">
+          <img src="./assets/icon.png" width="128" height="128" alt="AIGaokao 图标：朱红印鉴中的知识图谱" />
+          <div class="seal">准考证式下载</div>
+        </aside>
+        <section class="body">
+          <h1>AIGaokao</h1>
+          <p class="lead">
+            本机高考数学题库。导入真题与 PDF，构建知识图谱，按知识点出题。数据留在你的电脑上。
+          </p>
+          <div class="downloads" id="downloads"></div>
+          <footer>
+            版本 <span id="ver">0.1.0</span> ·
+            <a href="https://github.com/bennix/AIGaokao">源代码</a> ·
+            <a href="https://github.com/bennix/AIGaokao/releases">全部发行版</a>
+          </footer>
+        </section>
+      </article>
+    </main>
+    <script>
+      const VERSION = '0.1.0'
+      const BASE = 'https://github.com/bennix/AIGaokao/releases/latest/download'
+      const items = [
+        ['macOS Apple 芯片', '已公证 DMG', `${BASE}/AIGaokao-${VERSION}-mac-arm64.dmg`],
+        ['macOS Intel', '已公证 DMG', `${BASE}/AIGaokao-${VERSION}-mac-x64.dmg`],
+        ['Windows 10/11', '安装程序', `${BASE}/AIGaokao-${VERSION}-win-x64.exe`],
+        ['Ubuntu / Debian', 'deb 包', `${BASE}/AIGaokao-${VERSION}-linux-x64.deb`],
+        ['Fedora / RHEL', 'RPM 包', `${BASE}/AIGaokao-${VERSION}-linux-x64.rpm`]
+      ]
+      document.getElementById('ver').textContent = VERSION
+      document.getElementById('downloads').innerHTML = items
+        .map(
+          ([os, kind, href]) =>
+            `<a class="dl" href="${href}"><strong>${os}</strong><span>${kind}</span><em>下载</em></a>`
+        )
+        .join('')
+    </script>
+  </body>
+</html>

@@ -1,18 +1,22 @@
-import { app, BrowserWindow, net, protocol } from 'electron'
+import { app, BrowserWindow, protocol } from 'electron'
 import { existsSync } from 'fs'
+import { readFile } from 'fs/promises'
 import { join } from 'path'
-import { pathToFileURL } from 'url'
 import { openDb } from './db'
 import { registerIpc } from './ipc'
 import { safeJoin } from './pure/download-helpers'
+import { relFromAppPdfUrl } from './pure/pdf-url'
 
-protocol.registerSchemesAsPrivileged([{ scheme: 'app-pdf', privileges: { standard: true, stream: true } }])
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app-pdf', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
+])
 
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
     title: 'AIGaokao',
+    icon: join(__dirname, '../../build/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -28,15 +32,23 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   openDb(join(app.getPath('userData'), 'aigaokao.db'))
-  protocol.handle('app-pdf', (req) => {
+  protocol.handle('app-pdf', async (req) => {
     try {
-      const u = new URL(req.url)
-      const rel = decodeURIComponent(`${u.host}${u.pathname}`)
+      const rel = relFromAppPdfUrl(req.url)
       const abs = safeJoin(join(app.getPath('userData'), 'data', 'pdfs'), rel)
-      if (!existsSync(abs)) return new Response('not found', { status: 404 })
-      return net.fetch(pathToFileURL(abs).toString())
+      if (!existsSync(abs)) {
+        return new Response('找不到该 PDF，请重新下载。', {
+          status: 404,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        })
+      }
+      const data = await readFile(abs)
+      return new Response(new Uint8Array(data), { headers: { 'Content-Type': 'application/pdf' } })
     } catch {
-      return new Response('not found', { status: 404 })
+      return new Response('无法打开 PDF。', {
+        status: 404,
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      })
     }
   })
   registerIpc()

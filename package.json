@@ -2,13 +2,24 @@
   "name": "aigaokao",
   "version": "0.1.0",
   "private": true,
+  "description": "高考数学题库、知识图谱与智能出题桌面应用",
+  "author": "ZHIPING XU <zpxu@fudan.edu.cn>",
+  "homepage": "https://bennix.github.io/AIGaokao/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bennix/AIGaokao.git"
+  },
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "postinstall": "electron-rebuild -f -w better-sqlite3"
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "dist": "electron-vite build && electron-builder",
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "dist:win": "electron-vite build && electron-builder --win",
+    "dist:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",
@@ -31,6 +42,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
     "typescript": "^5.6.2",
     "vite": "^5.4.8",

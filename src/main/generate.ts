@@ -9,7 +9,8 @@ import {
   runPipeline,
   type PipelineDeps
 } from './pure/gen-core'
-import { chatJSON, makeDeps } from './zenmux'
+import { markdownPreviewFromLlm } from './pure/llm-preview'
+import { chatJSON, makeDeps, type ChatDeps } from './zenmux'
 import type { ProgressPayload, QuestionRow } from '../shared/types'
 
 function getSetting(key: string): string | null {
@@ -25,15 +26,42 @@ function roles(): { generator: string; solver: string; verifier: string } {
   }
 }
 
-function makePipelineDeps(): PipelineDeps {
-  const d = makeDeps()
+function makePipelineDeps(win: BrowserWindow, questionId?: number): PipelineDeps {
+  let last = 0
+  let preview = ''
+  const flush = (message: string, done: number): void => {
+    send(win, { task: 'gen', done, total: 2, message, preview, questionId, state: 'running' })
+  }
+  const base = makeDeps({
+    onWait: (ms) => flush(`ZenMux 限速，等待 ${Math.ceil(ms / 1000)} 秒`, 0)
+  })
   return {
     roles: roles(),
     chatJSON: async (model, system, user, schema, tag) => {
       const temp = tag === 'gen' ? 0.7 : 0.2
-      if (schema === GenSchema || tag === 'gen') return chatJSON(d, model, system, user, GenSchema, temp)
-      if (schema === SolveSchema || tag === 'solve') return chatJSON(d, model, system, user, SolveSchema, temp)
-      return chatJSON(d, model, system, user, VerifySchema, temp)
+      const message = tag === 'gen' ? '生成中' : tag === 'solve' ? '求解中' : '验证中'
+      const done = tag === 'verify' ? 1 : 0
+      preview = ''
+      flush(message, done)
+      const d: ChatDeps = {
+        ...base,
+        onDelta: (text) => {
+          preview = markdownPreviewFromLlm(text)
+          const now = Date.now()
+          if (now - last >= 80) {
+            last = now
+            flush(message, done)
+          }
+        }
+      }
+      const out =
+        schema === GenSchema || tag === 'gen'
+          ? await chatJSON(d, model, system, user, GenSchema, temp)
+          : schema === SolveSchema || tag === 'solve'
+            ? await chatJSON(d, model, system, user, SolveSchema, temp)
+            : await chatJSON(d, model, system, user, VerifySchema, temp)
+      flush(message, done)
+      return out
     }
   }
 }
@@ -95,13 +123,10 @@ export async function genCreate(
       .prepare(`SELECT name FROM knowledge_points WHERE id IN (${p.kpIds.map(() => '?').join(',') || 'NULL'})`)
       .all(...p.kpIds) as { name: string }[]
   ).map((r) => r.name)
-  const deps = makePipelineDeps()
+  const deps = makePipelineDeps(win)
   const ids: number[] = []
   for (let i = 0; i < count; i++) {
-    send(win, { task: 'gen', done: i, total: count, message: '生成中', state: 'running' })
     log(`genCreate ${i + 1}/${count}`)
-    send(win, { task: 'gen', done: i, total: count, message: '求解中', state: 'running' })
-    send(win, { task: 'gen', done: i, total: count, message: '验证中', state: 'running' })
     const result = await runPipeline(deps, { kpNames, qtype: p.qtype })
     const id = persistGenerated(result, p.kpIds, p.qtype)
     ids.push(id)
@@ -135,9 +160,8 @@ export async function solveRun(win: BrowserWindow, questionId: number): Promise<
   const { question } = questionsGet(questionId)
   const r = roles()
   if (r.solver === r.verifier) throw new Error('解题与验证不能使用同一模型,请到设置页修改')
-  const deps = makePipelineDeps()
+  const deps = makePipelineDeps(win, questionId)
   const optionsBlock = question.options?.length ? `选项:\n${question.options.join('\n')}` : ''
-  send(win, { task: 'gen', done: 0, total: 2, message: '求解中', state: 'running' })
   const solve = SolveSchema.parse(
     await deps.chatJSON(
       r.solver,
@@ -153,7 +177,6 @@ ${optionsBlock}`,
       'solve'
     )
   )
-  send(win, { task: 'gen', done: 1, total: 2, message: '验证中', state: 'running' })
   const verify = VerifySchema.parse(
     await deps.chatJSON(
       r.verifier,
