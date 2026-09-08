@@ -39,7 +39,7 @@ export default function QuestionDetail({ id, onBack, solveEnabled }: Props): JSX
     })
     const offProg = window.api.on('progress', (p) => {
       if (!('task' in p) || p.task !== 'gen') return
-      if (p.questionId != null && p.questionId !== id) return
+      if (p.questionId !== id) return
       setStreamMsg(p.message)
       if (p.preview != null) setStreamPreview(p.preview)
     })

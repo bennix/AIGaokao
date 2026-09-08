@@ -2,6 +2,7 @@ import { dialog } from 'electron'
 import { writeFile } from 'fs/promises'
 import { getDb } from './db'
 import { buildQuestionsQuery } from './pure/query-builder'
+import { formatQuestionsMarkdown } from './pure/export-md'
 import type { QuestionRow, SolutionRow } from '../shared/types'
 
 type QRow = {
@@ -150,19 +151,15 @@ export async function questionsExport(
   if (format === 'json') {
     body = JSON.stringify(items.map((x) => x.question), null, 2)
   } else {
-    body = items
-      .map((x, i) => {
-        const q = x.question
-        const opts = q.options?.map((o) => `- ${o}`).join('\n') ?? ''
-        const sols = x.solutions
-          .map(
-            (s) =>
-              `### 解法\n方法A:\n${s.methodA}\n\n方法B:\n${s.methodB}\n\n更快解法:\n${s.faster ?? ''}\n\n最终答案: ${s.finalAnswer}`
-          )
-          .join('\n\n')
-        return `## 题 ${i + 1}\n\n${q.stem}\n\n${opts}\n\n答案: ${q.answer ?? ''}\n\n解析:\n${q.analysis ?? ''}\n\n${sols}`
-      })
-      .join('\n\n')
+    body = formatQuestionsMarkdown(
+      items.map((x) => ({
+        stem: x.question.stem,
+        options: x.question.options,
+        answer: x.question.answer,
+        analysis: x.question.analysis,
+        solutions: x.solutions
+      }))
+    )
   }
   await writeFile(filePath, body, 'utf8')
   return { savedPath: filePath }

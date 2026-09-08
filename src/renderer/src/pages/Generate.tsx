@@ -29,6 +29,8 @@ export default function Generate({ kpIds, onOpen }: Props): JSX.Element {
     return window.api.on('gen:done', (p) => {
       if ('questionId' in p && typeof p.questionId === 'number') {
         setDoneId(p.questionId)
+        setProgress('')
+        setPreview('')
         setState('ok')
       }
     })
@@ -74,7 +76,7 @@ export default function Generate({ kpIds, onOpen }: Props): JSX.Element {
           {state === 'loading' ? '生成中…' : '开始生成'}
         </button>
       </div>
-      {progress && <p>{progress}</p>}
+      {state === 'loading' && progress && <p>{progress}</p>}
       {state === 'loading' && (
         <section className="card stream-box">
           {preview ? <MarkdownLatex text={preview} /> : <p className="muted">等待模型输出…</p>}

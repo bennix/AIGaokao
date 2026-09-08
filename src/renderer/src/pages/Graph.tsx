@@ -101,6 +101,30 @@ export default function Graph({ onFilterBank, onOpenQuestion }: Props): JSX.Elem
         <button disabled={!selected.size} onClick={() => onFilterBank([...selected])}>
           在题库中筛选
         </button>
+        <button
+          disabled={!selected.size}
+          onClick={() => {
+            void (async () => {
+              try {
+                const r = await window.api.questionsQuery({
+                  kpIds: [...selected],
+                  page: 1,
+                  pageSize: 500
+                })
+                if (!r.items.length) throw new Error('所选知识点下没有题目')
+                await window.api.questionsExport(
+                  r.items.map((q) => q.id),
+                  'markdown'
+                )
+              } catch (e) {
+                setError(e instanceof Error ? e.message : String(e))
+                setState('error')
+              }
+            })()
+          }}
+        >
+          导出 Markdown
+        </button>
       </div>
       <div className="graph-gen">
         {genKpIds.length > 0 && <Generate kpIds={genKpIds} onOpen={onOpenQuestion} />}

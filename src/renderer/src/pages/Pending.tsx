@@ -4,6 +4,7 @@ import MarkdownLatex from '../components/MarkdownLatex'
 
 export default function Pending(): JSX.Element | null {
   const [items, setItems] = useState<QuestionRow[]>([])
+  const [selected, setSelected] = useState<number[]>([])
   const [open, setOpen] = useState<number | null>(null)
   const [detail, setDetail] = useState<Awaited<ReturnType<typeof window.api.questionsGet>> | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'error'>('loading')
@@ -12,7 +13,9 @@ export default function Pending(): JSX.Element | null {
   async function load(): Promise<void> {
     setState('loading')
     try {
-      setItems(await window.api.genPending())
+      const next = await window.api.genPending()
+      setItems(next)
+      setSelected((s) => s.filter((id) => next.some((q) => q.id === id)))
       setState('ok')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -22,6 +25,9 @@ export default function Pending(): JSX.Element | null {
 
   useEffect(() => {
     void load()
+    return window.api.on('gen:done', () => {
+      void load()
+    })
   }, [])
 
   async function expand(id: number): Promise<void> {
@@ -29,12 +35,27 @@ export default function Pending(): JSX.Element | null {
     setDetail(await window.api.questionsGet(id))
   }
 
+  function toggle(id: number): void {
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
+  }
+
   async function resolve(id: number, action: 'accept' | 'discard'): Promise<void> {
     try {
       await window.api.genResolve(id, action)
       setOpen(null)
       setDetail(null)
+      setItems((prev) => prev.filter((q) => q.id !== id))
+      setSelected((s) => s.filter((x) => x !== id))
       await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  async function expMd(): Promise<void> {
+    if (!selected.length) return
+    try {
+      await window.api.questionsExport(selected, 'markdown')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
@@ -51,9 +72,16 @@ export default function Pending(): JSX.Element | null {
           {error} <button onClick={() => void load()}>重试</button>
         </p>
       )}
+      <div className="row">
+        <button onClick={() => void expMd()} disabled={!selected.length}>
+          导出 Markdown
+        </button>
+        {selected.length ? <span>已选 {selected.length}</span> : null}
+      </div>
       <ul className="list">
         {items.map((q) => (
-          <li key={q.id}>
+          <li key={q.id} className="bank-item">
+            <input type="checkbox" checked={selected.includes(q.id)} onChange={() => toggle(q.id)} />
             <button className="link" onClick={() => void expand(q.id)}>
               {q.stem.slice(0, 80)}
             </button>

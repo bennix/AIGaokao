@@ -120,6 +120,16 @@ export default function Bank({ onOpen, kpIds }: Props): JSX.Element {
         </button>
       </div>
       <div className="row">
+        <button
+          onClick={() => {
+            const ids = items.map((q) => q.id)
+            const allOn = ids.length > 0 && ids.every((id) => selected.includes(id))
+            setSelected((s) => (allOn ? s.filter((id) => !ids.includes(id)) : [...new Set([...s, ...ids])]))
+          }}
+          disabled={!items.length}
+        >
+          全选本页
+        </button>
         <button onClick={() => void del()} disabled={!selected.length}>
           批量删除
         </button>
@@ -129,7 +139,9 @@ export default function Bank({ onOpen, kpIds }: Props): JSX.Element {
         <button onClick={() => void exp('markdown')} disabled={!selected.length}>
           导出 Markdown
         </button>
-        <span>共 {total} 题</span>
+        <span>
+          共 {total} 题{selected.length ? ` · 已选 ${selected.length}` : ''}
+        </span>
       </div>
       {state === 'loading' && <p>加载中…</p>}
       {state === 'error' && (
@@ -139,13 +151,11 @@ export default function Bank({ onOpen, kpIds }: Props): JSX.Element {
       )}
       <ul className="list">
         {items.map((q) => (
-          <li key={q.id}>
-            <label>
-              <input type="checkbox" checked={selected.includes(q.id)} onChange={() => toggle(q.id)} />
-              <button className="link" onClick={() => onOpen(q.id)}>
-                [{q.year ?? '—'}] {q.stem.slice(0, 80)}
-              </button>
-            </label>
+          <li key={q.id} className="bank-item">
+            <input type="checkbox" checked={selected.includes(q.id)} onChange={() => toggle(q.id)} />
+            <button className="link" onClick={() => onOpen(q.id)}>
+              [{q.year ?? '—'}] {q.stem.slice(0, 80)}
+            </button>
           </li>
         ))}
       </ul>
