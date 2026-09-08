@@ -1,3 +1,4 @@
+import path from 'path'
 import { describe, it, expect } from 'vitest'
 import { shouldSkipFile, safeJoin } from './download-helpers'
 
@@ -15,9 +16,10 @@ describe('shouldSkipFile', () => {
 
 describe('safeJoin(路径穿越防护)', () => {
   it('正常子路径', () => {
-    expect(safeJoin('/root/pdfs', '2023/a.pdf')).toBe('/root/pdfs/2023/a.pdf')
+    const root = path.resolve('root-pdfs')
+    expect(safeJoin(root, path.join('2023', 'a.pdf'))).toBe(path.join(root, '2023', 'a.pdf'))
   })
   it('../ 穿越 → 抛错', () => {
-    expect(() => safeJoin('/root/pdfs', '../secret')).toThrow()
+    expect(() => safeJoin(path.resolve('root-pdfs'), path.join('..', 'secret'))).toThrow()
   })
 })
