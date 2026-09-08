@@ -30,6 +30,24 @@ export function answersMatch(a: string, b: string, qtype: string): boolean {
   return a.replace(/\s+/g, '') === b.replace(/\s+/g, '')
 }
 
+export function normalizeStem(stem: string): string {
+  return stem.replace(/\s+/g, '').replace(/\$+/g, '').toLowerCase()
+}
+
+/** 同文或只改数字/参数，视为重复。 */
+export function isSimilarStem(a: string, b: string): boolean {
+  const na = normalizeStem(a)
+  const nb = normalizeStem(b)
+  if (!na || !nb) return false
+  if (na === nb) return true
+  const da = na.replace(/\d+/g, '#')
+  const db = nb.replace(/\d+/g, '#')
+  if (da.length >= 24 && da === db) return true
+  const shorter = na.length <= nb.length ? na : nb
+  const longer = na.length > nb.length ? na : nb
+  return shorter.length >= 24 && longer.includes(shorter)
+}
+
 export type PipelineDeps = {
   roles: { generator: string; solver: string; verifier: string }
   chatJSON: (
@@ -55,16 +73,31 @@ const QTYPE_CN: Record<string, string> = {
 
 export async function runPipeline(
   deps: PipelineDeps,
-  p: { kpNames: string[]; qtype: 'choice' | 'answer' | 'comprehensive' }
+  p: { kpNames: string[]; qtype: 'choice' | 'answer' | 'comprehensive'; avoidStems?: string[] }
 ): Promise<{ question: GenOut; solution: SolveOut & { verdict: string; note: string | null }; verifyStatus: 'verified' | 'pending' }> {
   if (deps.roles.solver === deps.roles.verifier) {
     throw new Error('解题与验证不能使用同一模型,请到设置页修改')
   }
+  const avoid = p.avoidStems?.filter(Boolean) ?? []
+  const avoidBlock = avoid.length
+    ? `\n已出题目如下，本题必须在题意、情境、所求上明显不同，禁止只改数字、底数或字母：\n${avoid.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n`
+    : ''
   const genUser = `围绕以下知识点命制一道原创${QTYPE_CN[p.qtype] ?? p.qtype}(choice=单项选择题含4个选项/answer=简答题/comprehensive=综合题,
 须同时考查多个所给知识点):${p.kpNames.join('、')}
-难度对标高考真题。输出 JSON:
+难度对标高考真题。${avoidBlock}输出 JSON:
 {"stem":"题干","options":["A. ...","B. ...","C. ...","D. ..."]或null,"answer":"参考答案(选择题只写字母)"}`
-  const question = GenSchema.parse(await deps.chatJSON(deps.roles.generator, GEN_SYSTEM, genUser, GenSchema, 'gen'))
+  let question = GenSchema.parse(await deps.chatJSON(deps.roles.generator, GEN_SYSTEM, genUser, GenSchema, 'gen'))
+  for (let retry = 0; retry < 2 && avoid.some((s) => isSimilarStem(s, question.stem)); retry++) {
+    question = GenSchema.parse(
+      await deps.chatJSON(
+        deps.roles.generator,
+        GEN_SYSTEM,
+        `${genUser}\n你上一题与已出题目过于接近，请彻底换情境重出。`,
+        GenSchema,
+        'gen'
+      )
+    )
+  }
   const optionsBlock = question.options?.length ? `选项:\n${question.options.join('\n')}` : ''
   const solveUser = `用两种思路本质不同的方法分步求解下题,两种方法必须各自独立得出答案并在末尾互相印证;
 若存在比两种方法都更快捷的解法,一并给出,否则该字段为 null。

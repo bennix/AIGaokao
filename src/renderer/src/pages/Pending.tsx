@@ -42,11 +42,17 @@ export default function Pending(): JSX.Element | null {
   async function resolve(id: number, action: 'accept' | 'discard'): Promise<void> {
     try {
       await window.api.genResolve(id, action)
-      setOpen(null)
-      setDetail(null)
-      setItems((prev) => prev.filter((q) => q.id !== id))
+      const remaining = items.filter((q) => q.id !== id)
+      const i = items.findIndex((q) => q.id === id)
+      setItems(remaining)
       setSelected((s) => s.filter((x) => x !== id))
-      await load()
+      if (remaining.length) {
+        const next = remaining[Math.min(Math.max(0, i), remaining.length - 1)]
+        await expand(next.id)
+      } else {
+        setOpen(null)
+        setDetail(null)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
@@ -62,6 +68,8 @@ export default function Pending(): JSX.Element | null {
   }
 
   if (state === 'ok' && !items.length && !detail) return null
+
+  const openIdx = open == null ? -1 : items.findIndex((q) => q.id === open)
 
   return (
     <div>
@@ -90,8 +98,27 @@ export default function Pending(): JSX.Element | null {
       </ul>
       {detail && open === detail.question.id && (
         <section className="card">
+          {items.length > 1 && (
+            <div className="row">
+              <button disabled={openIdx <= 0} onClick={() => void expand(items[openIdx - 1].id)}>
+                上一题
+              </button>
+              <span>
+                {openIdx + 1}/{items.length}
+              </span>
+              <button
+                disabled={openIdx < 0 || openIdx >= items.length - 1}
+                onClick={() => void expand(items[openIdx + 1].id)}
+              >
+                下一题
+              </button>
+            </div>
+          )}
           <h2>题目</h2>
           <MarkdownLatex text={detail.question.stem} />
+          {detail.question.options?.map((o) => (
+            <MarkdownLatex key={o} text={o} />
+          ))}
           <h2>命题人答案</h2>
           <MarkdownLatex text={detail.question.answer ?? ''} />
           <h2>解题人答案</h2>

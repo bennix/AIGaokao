@@ -51,7 +51,7 @@ export interface Api {
 
   // ---- 事件订阅 ----
   on(channel: 'progress'|'gen:done'|'solve:done',
-     cb: (payload: ProgressPayload | { questionId: number }) => void): () => void;
+     cb: (payload: ProgressPayload | { questionId: number; questionIds?: number[] }) => void): () => void;
 }
 
 export interface QuestionRow { id: number; source: string; year: number|null;

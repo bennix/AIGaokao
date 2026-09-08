@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { answersMatch, runPipeline, type PipelineDeps } from './gen-core'
+import { answersMatch, isSimilarStem, runPipeline, type PipelineDeps } from './gen-core'
 
 describe('answersMatch', () => {
   it('选择题按字母比较,忽略大小写与空白', () => {
@@ -8,6 +8,22 @@ describe('answersMatch', () => {
   })
   it('非选择题去空白比较', () => {
     expect(answersMatch('x = ±2', 'x=±2', 'answer')).toBe(true)
+  })
+})
+
+describe('isSimilarStem', () => {
+  const a =
+    '已知实数 $a=\\log_{\\{\\frac{1}{2}\\}}3$, $b=\\log_2 3$, $c=\\log_3 2$, 则下列大小关系正确的是'
+  const b =
+    '已知实数 $a=\\log_{\\{\\frac{1}{3}\\}}2$, $b=\\log_2 3$, $c=\\log_3 2$, 则下列大小关系正确的是'
+  it('只改底数或数字视为重复', () => {
+    expect(isSimilarStem(a, b)).toBe(true)
+  })
+  it('空白与美元符不影响比较', () => {
+    expect(isSimilarStem('求 $x$ 的值', '求x的值')).toBe(true)
+  })
+  it('题意不同则不判重', () => {
+    expect(isSimilarStem(a, '抛物线 $y=x^2$ 过原点，求其焦点坐标')).toBe(false)
   })
 })
 
@@ -42,5 +58,30 @@ describe('runPipeline', () => {
     const d = deps({})
     d.roles = { generator: 'g', solver: 'same', verifier: 'same' }
     await expect(runPipeline(d, { kpNames: ['集合'], qtype: 'answer' })).rejects.toThrow('模型')
+  })
+  it('与已出题干相似则重出', async () => {
+    const old =
+      '已知实数 $a=\\log_{\\{\\frac{1}{2}\\}}3$, $b=\\log_2 3$, $c=\\log_3 2$, 则下列大小关系正确的是'
+    const neu = '抛物线 $y=x^2$ 过原点，求其焦点坐标与准线方程'
+    let genCalls = 0
+    const d = deps({})
+    d.chatJSON = vi.fn(async (_m, _s, user: string, _schema, tag?: string) => {
+      if (tag === 'gen') {
+        genCalls++
+        expect(user).toContain('已出题目')
+        return genCalls === 1 ? { stem: old, options: null, answer: 'x=1' } : { stem: neu, options: null, answer: 'x=1' }
+      }
+      if (tag === 'solve') return solveOk
+      return { verdict: 'agree', note: '' }
+    }) as never
+    const r = await runPipeline(d, {
+      kpNames: ['集合'],
+      qtype: 'answer',
+      avoidStems: [
+        '已知实数 $a=\\log_{\\{\\frac{1}{3}\\}}2$, $b=\\log_2 3$, $c=\\log_3 2$, 则下列大小关系正确的是'
+      ]
+    })
+    expect(r.question.stem).toBe(neu)
+    expect(genCalls).toBe(2)
   })
 })

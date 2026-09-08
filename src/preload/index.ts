@@ -35,7 +35,10 @@ const api: Api = {
   pdfOpenExternal: (rel) => ipcRenderer.invoke('pdfOpenExternal', rel),
 
   on(channel, cb) {
-    const listener = (_event: unknown, payload: ProgressPayload | { questionId: number }): void => {
+    const listener = (
+      _event: unknown,
+      payload: ProgressPayload | { questionId: number; questionIds?: number[] }
+    ): void => {
       cb(payload)
     }
     ipcRenderer.on(channel, listener)

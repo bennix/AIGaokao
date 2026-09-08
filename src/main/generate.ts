@@ -6,6 +6,7 @@ import {
   GenSchema,
   SolveSchema,
   VerifySchema,
+  isSimilarStem,
   runPipeline,
   type PipelineDeps
 } from './pure/gen-core'
@@ -125,15 +126,26 @@ export async function genCreate(
   ).map((r) => r.name)
   const deps = makePipelineDeps(win)
   const ids: number[] = []
-  for (let i = 0; i < count; i++) {
-    log(`genCreate ${i + 1}/${count}`)
-    const result = await runPipeline(deps, { kpNames, qtype: p.qtype })
+  const stems: string[] = []
+  let attempts = 0
+  while (ids.length < count && attempts < count * 3) {
+    attempts++
+    log(`genCreate ${ids.length + 1}/${count} attempt=${attempts}`)
+    const result = await runPipeline(deps, { kpNames, qtype: p.qtype, avoidStems: stems })
+    if (stems.some((s) => isSimilarStem(s, result.question.stem))) {
+      log('genCreate skip similar stem')
+      continue
+    }
     const id = persistGenerated(result, p.kpIds, p.qtype)
     ids.push(id)
+    stems.push(result.question.stem)
     log(`genCreate saved id=${id} status=${result.verifyStatus}`)
+    win.webContents.send('gen:done', { questionId: id, questionIds: [...ids] })
   }
-  send(win, { task: 'gen', done: count, total: count, message: '完成', state: 'ok' })
-  win.webContents.send('gen:done', { questionId: ids[ids.length - 1] })
+  send(win, { task: 'gen', done: ids.length, total: count, message: '完成', state: 'ok' })
+  if (ids.length && attempts >= count * 3 && ids.length < count) {
+    log(`genCreate stopped early unique=${ids.length} requested=${count}`)
+  }
 }
 
 export function genPending(): QuestionRow[] {
