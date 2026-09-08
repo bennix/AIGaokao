@@ -208,47 +208,22 @@ button:disabled {
 
 .graph-layout {
   display: flex;
-  gap: 16px;
   flex: 1;
   min-height: 0;
-}
-
-.graph-canvas-wrap {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-}
-
-.graph-canvas {
-  height: 100%;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  overflow: hidden;
-  overscroll-behavior: none;
-  touch-action: none;
 }
 
 .graph-tree {
-  width: 280px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
   min-height: 0;
-  overflow-x: hidden;
   overflow-y: auto;
-  padding-right: 4px;
+  column-width: 280px;
+  column-gap: 24px;
 }
 
-.graph-tip {
-  position: absolute;
-  z-index: 2;
-  max-width: 220px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: #0f172a;
-  color: #fff;
-  font-size: 12px;
-  pointer-events: none;
-  white-space: normal;
+.graph-tree-block {
+  break-inside: avoid;
+  margin-bottom: 12px;
 }
 
 .muted {

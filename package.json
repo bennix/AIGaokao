@@ -1,6 +1,6 @@
 {
   "name": "aigaokao",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "高考数学题库、知识图谱与智能出题桌面应用",
   "author": "ZHIPING XU <zpxu@fudan.edu.cn>",
@@ -23,7 +23,6 @@
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",
-    "cytoscape": "^3.30.0",
     "extract-zip": "^2.0.1",
     "katex": "^0.16.11",
     "markdown-it": "^14.1.0",
@@ -34,7 +33,6 @@
   "devDependencies": {
     "@electron/rebuild": "^3.6.0",
     "@types/better-sqlite3": "^7.6.11",
-    "@types/cytoscape": "^3.21.0",
     "@types/katex": "^0.16.7",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^20.14.0",

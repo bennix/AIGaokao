@@ -6,8 +6,8 @@
 
 | 平台 | 安装包 |
 | --- | --- |
-| macOS Apple 芯片 | [DMG](https://github.com/bennix/AIGaokao/releases/latest/download/AIGaokao-0.1.0-mac-arm64.dmg) |
-| macOS Intel | [DMG](https://github.com/bennix/AIGaokao/releases/latest/download/AIGaokao-0.1.0-mac-x64.dmg) |
-| Windows | [安装程序](https://github.com/bennix/AIGaokao/releases/latest/download/AIGaokao-0.1.0-win-x64.exe) |
-| Ubuntu / Debian | [deb](https://github.com/bennix/AIGaokao/releases/latest/download/AIGaokao-0.1.0-linux-amd64.deb) |
-| Fedora / RHEL | [RPM](https://github.com/bennix/AIGaokao/releases/latest/download/AIGaokao-0.1.0-linux-x86_64.rpm) |
+| macOS Apple 芯片 | [DMG](https://github.com/bennix/AIGaokao/releases/latest/download/AIGaokao-0.1.1-mac-arm64.dmg) |
+| macOS Intel | [DMG](https://github.com/bennix/AIGaokao/releases/latest/download/AIGaokao-0.1.1-mac-x64.dmg) |
+| Windows | [安装程序](https://github.com/bennix/AIGaokao/releases/latest/download/AIGaokao-0.1.1-win-x64.exe) |
+| Ubuntu / Debian | [deb](https://github.com/bennix/AIGaokao/releases/latest/download/AIGaokao-0.1.1-linux-amd64.deb) |
+| Fedora / RHEL | [RPM](https://github.com/bennix/AIGaokao/releases/latest/download/AIGaokao-0.1.1-linux-x86_64.rpm) |
