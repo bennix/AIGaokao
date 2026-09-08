@@ -217,13 +217,18 @@ button:disabled {
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
-  column-width: 280px;
-  column-gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px 20px;
+  align-content: start;
 }
 
-.graph-tree-block {
-  break-inside: avoid;
-  margin-bottom: 12px;
+.graph-tree-root {
+  min-width: 0;
+}
+
+.graph-tree-child {
+  padding-left: 12px;
 }
 
 .muted {

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { kgBuildButtonLabel, kgBuildHint } from '../../../shared/kg-resume'
+import { buildKpForest, type KpTreeNode } from '../../../shared/kp-tree'
 import Generate from './Generate'
 import Pending from './Pending'
 
@@ -44,9 +45,7 @@ export default function Graph({ onFilterBank, onOpenQuestion }: Props): JSX.Elem
     })
   }
 
-  const chapters = nodes.filter((n) => n.level === 'chapter')
-  const topics = nodes.filter((n) => n.level === 'topic')
-  const points = nodes.filter((n) => n.level === 'point')
+  const forest = useMemo(() => buildKpForest(nodes), [nodes])
 
   return (
     <div className="page graph-page">
@@ -76,35 +75,14 @@ export default function Graph({ onFilterBank, onOpenQuestion }: Props): JSX.Elem
           {error} <button onClick={() => void load()}>重试</button>
         </p>
       )}
-      <p className="muted">勾选知识点后可生成题目，或到题库中筛选。</p>
+      <p className="muted">
+        共 {nodes.length} 个知识点。勾选后可生成题目，或到题库中筛选。
+      </p>
       <div className="graph-layout">
         <aside className="graph-tree">
-          {chapters.map((c) => (
-            <div key={c.id} className="graph-tree-block">
-              <label>
-                <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} />
-                {c.name}
-              </label>
-              {topics
-                .filter((t) => t.parentId === c.id)
-                .map((t) => (
-                  <div key={t.id} style={{ paddingLeft: 12 }}>
-                    <label>
-                      <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggle(t.id)} />
-                      {t.name}
-                    </label>
-                    {points
-                      .filter((p) => p.parentId === t.id)
-                      .map((p) => (
-                        <div key={p.id} style={{ paddingLeft: 12 }}>
-                          <label>
-                            <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} />
-                            {p.name}
-                          </label>
-                        </div>
-                      ))}
-                  </div>
-                ))}
+          {forest.map((root) => (
+            <div key={root.id} className="graph-tree-root">
+              <KpRow node={root} selected={selected} onToggle={toggle} />
             </div>
           ))}
         </aside>
@@ -128,6 +106,31 @@ export default function Graph({ onFilterBank, onOpenQuestion }: Props): JSX.Elem
         {genKpIds.length > 0 && <Generate kpIds={genKpIds} onOpen={onOpenQuestion} />}
         <Pending />
       </div>
+    </div>
+  )
+}
+
+function KpRow({
+  node,
+  selected,
+  onToggle
+}: {
+  node: KpTreeNode
+  selected: Set<number>
+  onToggle: (id: number) => void
+}): JSX.Element {
+  return (
+    <div>
+      <label>
+        <input type="checkbox" checked={selected.has(node.id)} onChange={() => onToggle(node.id)} />
+        {node.name}
+        {node.questionCount > 0 ? <span className="muted"> · {node.questionCount}</span> : null}
+      </label>
+      {node.children.map((c) => (
+        <div key={c.id} className="graph-tree-child">
+          <KpRow node={c} selected={selected} onToggle={onToggle} />
+        </div>
+      ))}
     </div>
   )
 }
