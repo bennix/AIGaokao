@@ -78,4 +78,15 @@ describe('chatJSON', () => {
     expect(r).toEqual({ a: 1 })
     expect(chunks.at(-1)).toBe('{"a":1}')
   })
+
+  it('SSE 只有思考内容时不把已读 body 再当 JSON 解析', async () => {
+    const sse = 'data: {"choices":[{"delta":{"reasoning_content":"想"}}]}\n\ndata: [DONE]\n\n'
+    const f = vi.fn(
+      async () => new Response(sse, { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+    )
+    await expect(
+      chatJSON({ ...deps(f as never), onDelta: () => undefined }, 'm', 's', 'u', schema)
+    ).rejects.toThrow('合法 JSON')
+    expect(f).toHaveBeenCalledTimes(3)
+  })
 })

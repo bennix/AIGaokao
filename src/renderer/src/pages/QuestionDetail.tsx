@@ -13,6 +13,7 @@ export default function QuestionDetail({ id, onBack, solveEnabled }: Props): JSX
   const [solve, setSolve] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
   const [streamMsg, setStreamMsg] = useState('')
   const [streamPreview, setStreamPreview] = useState('')
+  const [elapsed, setElapsed] = useState(0)
 
   async function load(): Promise<void> {
     setState('loading')
@@ -49,6 +50,16 @@ export default function QuestionDetail({ id, onBack, solveEnabled }: Props): JSX
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  useEffect(() => {
+    if (solve !== 'loading') {
+      setElapsed(0)
+      return
+    }
+    const t0 = Date.now()
+    const id = window.setInterval(() => setElapsed(Math.floor((Date.now() - t0) / 1000)), 1000)
+    return () => window.clearInterval(id)
+  }, [solve])
 
   async function runSolve(): Promise<void> {
     setSolve('loading')
@@ -121,7 +132,14 @@ export default function QuestionDetail({ id, onBack, solveEnabled }: Props): JSX
       {solve === 'loading' && (
         <section className="card stream-box">
           <h2>{streamMsg || '详解中…'}</h2>
-          {streamPreview ? <MarkdownLatex text={streamPreview} /> : <p className="muted">等待模型输出…</p>}
+          <p className="muted">已等待 {elapsed} 秒</p>
+          {streamPreview ? (
+            <MarkdownLatex text={streamPreview} />
+          ) : (
+            <p className="muted">
+              {elapsed < 20 ? '正在连接模型…' : '模型可能在思考，请继续等待'}
+            </p>
+          )}
         </section>
       )}
       {solve === 'error' && (

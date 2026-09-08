@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { unwrapIpcError } from '../../../shared/ipc-error'
 import MarkdownLatex from '../components/MarkdownLatex'
 
 type Props = { kpIds: number[]; onOpen: (id: number) => void }
@@ -15,6 +16,7 @@ export default function Generate({ kpIds, onOpen }: Props): JSX.Element {
   const [doneIds, setDoneIds] = useState<number[]>([])
   const [viewIdx, setViewIdx] = useState(0)
   const [view, setView] = useState<Detail | null>(null)
+  const [elapsed, setElapsed] = useState(0)
 
   useEffect(() => {
     void window.api.kgGet().then((g) => {
@@ -50,6 +52,16 @@ export default function Generate({ kpIds, onOpen }: Props): JSX.Element {
     void window.api.questionsGet(id).then(setView).catch(() => setView(null))
   }, [doneIds, viewIdx])
 
+  useEffect(() => {
+    if (state !== 'loading') {
+      setElapsed(0)
+      return
+    }
+    const t0 = Date.now()
+    const id = window.setInterval(() => setElapsed(Math.floor((Date.now() - t0) / 1000)), 1000)
+    return () => window.clearInterval(id)
+  }, [state])
+
   async function start(): Promise<void> {
     setState('loading')
     setError('')
@@ -63,7 +75,7 @@ export default function Generate({ kpIds, onOpen }: Props): JSX.Element {
       setPreview('')
       setState('ok')
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(unwrapIpcError(e))
       setState('error')
     }
   }
@@ -97,10 +109,20 @@ export default function Generate({ kpIds, onOpen }: Props): JSX.Element {
           {state === 'loading' ? '生成中…' : '开始生成'}
         </button>
       </div>
-      {state === 'loading' && progress && <p>{progress}</p>}
       {state === 'loading' && (
         <section className="card stream-box">
-          {preview ? <MarkdownLatex text={preview} /> : <p className="muted">等待模型输出…</p>}
+          <p className="muted">
+            {progress || '准备中'} · 已等待 {elapsed} 秒
+          </p>
+          {preview ? (
+            <MarkdownLatex text={preview} />
+          ) : (
+            <p className="muted">
+              {elapsed < 20
+                ? '正在连接模型…'
+                : '模型可能在思考，出题+解答+验证常需数分钟。若一直无输出，可到设置页换更快的出题模型。'}
+            </p>
+          )}
         </section>
       )}
       {state === 'error' && (

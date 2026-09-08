@@ -15,7 +15,8 @@ export type ChatDeps = {
   waitTurn?: () => Promise<void>
   onWait?: (ms: number) => void
   aborted?: () => boolean
-  onDelta?: (full: string) => void
+  onRequest?: () => void
+  onDelta?: (full: string, meta?: { reasoning?: string }) => void
 }
 
 export async function waitForZenmuxSlot(opts?: {
@@ -69,10 +70,12 @@ async function postChat(
   })
 
   if (deps.waitTurn) await deps.waitTurn()
+  deps.onRequest?.()
   let res = await deps.fetchFn(url, init())
   if (res.status === 429) {
     await new Promise((r) => setTimeout(r, 5000))
     if (deps.waitTurn) await deps.waitTurn()
+    deps.onRequest?.()
     res = await deps.fetchFn(url, init())
   }
   if (res.status === 401 || res.status === 403) {
@@ -83,10 +86,9 @@ async function postChat(
     throw new Error(`${res.status} ${body.slice(0, 200)}`)
   }
   if (deps.onDelta && res.body) {
-    const ct = res.headers.get('content-type') ?? ''
-    if (ct.includes('event-stream') || ct.includes('text/plain')) {
-      const text = await readSseText(res, deps.onDelta)
-      if (text) return text
+    const ct = (res.headers.get('content-type') ?? '').toLowerCase()
+    if (ct.includes('event-stream') || ct.includes('text/plain') || ct.includes('octet-stream')) {
+      return await readSseText(res, deps.onDelta)
     }
   }
   const data = (await res.json()) as { choices?: { message?: { content?: string } }[] }
@@ -95,22 +97,32 @@ async function postChat(
   return text
 }
 
-async function readSseText(res: Response, onDelta: (full: string) => void): Promise<string> {
+async function readSseText(
+  res: Response,
+  onDelta: (full: string, meta?: { reasoning?: string }) => void
+): Promise<string> {
   const reader = res.body?.getReader()
   if (!reader) return ''
   const dec = new TextDecoder()
   let carry = ''
   let full = ''
+  let reasoning = ''
   for (;;) {
     const { done, value } = await reader.read()
     if (done) break
     carry += dec.decode(value, { stream: true })
-    const { rest, deltas } = splitSse(carry)
+    const { rest, deltas, thoughts } = splitSse(carry)
     carry = rest
+    let changed = false
     for (const d of deltas) {
       full += d
-      onDelta(full)
+      changed = true
     }
+    for (const t of thoughts) {
+      reasoning += t
+      changed = true
+    }
+    if (changed) onDelta(full, { reasoning })
   }
   return full
 }

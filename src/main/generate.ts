@@ -43,11 +43,17 @@ function makePipelineDeps(win: BrowserWindow, questionId?: number): PipelineDeps
       const message = tag === 'gen' ? '生成中' : tag === 'solve' ? '求解中' : '验证中'
       const done = tag === 'verify' ? 1 : 0
       preview = ''
-      flush(message, done)
+      flush(`${message}（${model}）`, done)
+      log(`chat ${tag} ${model}`)
       const d: ChatDeps = {
         ...base,
-        onDelta: (text) => {
-          preview = markdownPreviewFromLlm(text)
+        onRequest: () => flush(`${message}：正在连接 ${model}`, done),
+        onDelta: (text, meta) => {
+          const md = markdownPreviewFromLlm(text)
+          const think = meta?.reasoning?.trim()
+          if (md) preview = md
+          else if (think) preview = `### 思考中\n\n${think.slice(-6000)}`
+          else if (text.trim()) preview = `已收到 ${text.length} 字`
           const now = Date.now()
           if (now - last >= 80) {
             last = now
