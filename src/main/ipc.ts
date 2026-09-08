@@ -70,8 +70,10 @@ export function registerIpc(): void {
 
   ipcMain.handle('modelsRemove', async (_e, name: string) => {
     const roles = getRoles()
-    if (roles.generator === name || roles.solver === name || roles.verifier === name) {
-      throw new Error('该模型正被角色占用,请先改指派')
+    const used = (['generator', 'solver', 'verifier'] as const).filter((r) => roles[r] === name)
+    if (used.length) {
+      const labels = { generator: '出题', solver: '解题', verifier: '验证' }
+      throw new Error(`该模型正被「${used.map((r) => labels[r]).join('、')}」占用，请先改指派`)
     }
     getDb().prepare('DELETE FROM models WHERE name = ?').run(name)
   })

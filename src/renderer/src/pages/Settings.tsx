@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { unwrapIpcError } from '../../../shared/ipc-error'
 
 type Roles = { generator: string; solver: string; verifier: string }
 type TestState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'ok'; message: string } | { kind: 'error'; message: string }
@@ -28,7 +29,7 @@ export default function Settings(): JSX.Element {
       setRoles(s.roles)
       setModels(s.models)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(unwrapIpcError(e))
     } finally {
       setLoading(false)
     }
@@ -45,7 +46,7 @@ export default function Settings(): JSX.Element {
       setKeyInput('')
       await reload()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(unwrapIpcError(e))
     }
   }
 
@@ -55,7 +56,7 @@ export default function Settings(): JSX.Element {
       await window.api.settingsClearApiKey()
       await reload()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(unwrapIpcError(e))
     }
   }
 
@@ -68,7 +69,7 @@ export default function Settings(): JSX.Element {
       setNewModel('')
       await reload()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(unwrapIpcError(e))
     }
   }
 
@@ -78,7 +79,7 @@ export default function Settings(): JSX.Element {
       await window.api.modelsRemove(name)
       await reload()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(unwrapIpcError(e))
     }
   }
 
@@ -88,7 +89,7 @@ export default function Settings(): JSX.Element {
       await window.api.settingsSetRole(role, model)
       await reload()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(unwrapIpcError(e))
     }
   }
 
@@ -98,7 +99,7 @@ export default function Settings(): JSX.Element {
       const r = await window.api.zenmuxTest()
       setTest(r.ok ? { kind: 'ok', message: r.message } : { kind: 'error', message: r.message })
     } catch (e) {
-      setTest({ kind: 'error', message: e instanceof Error ? e.message : String(e) })
+      setTest({ kind: 'error', message: unwrapIpcError(e) })
     }
   }
 
@@ -145,12 +146,19 @@ export default function Settings(): JSX.Element {
       <section className="card">
         <h2>模型</h2>
         <ul className="list">
-          {models.map((m) => (
-            <li key={m}>
-              {m}
-              <button onClick={() => void removeModel(m)}>删除</button>
-            </li>
-          ))}
+          {models.map((m) => {
+            const used = (Object.keys(ROLE_LABEL) as (keyof Roles)[]).filter((r) => roles[r] === m)
+            return (
+              <li key={m}>
+                <span>{m}</span>
+                {used.length ? (
+                  <span className="muted">占用：{used.map((r) => ROLE_LABEL[r]).join('、')}</span>
+                ) : (
+                  <button onClick={() => void removeModel(m)}>删除</button>
+                )}
+              </li>
+            )
+          })}
         </ul>
         <div className="row">
           <input

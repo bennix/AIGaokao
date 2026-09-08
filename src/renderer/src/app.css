@@ -116,6 +116,12 @@ button:disabled {
   border-bottom: 1px solid #f3f4f6;
 }
 
+.list li span:first-child {
+  flex: 1;
+  min-width: 0;
+  word-break: break-all;
+}
+
 .bank-item .link,
 .list .link {
   flex: 1;
